@@ -1,0 +1,13 @@
+config.json
+*.test
+*.out
+
+dist/
+build/
+tmp/
+
+.idea/
+.vscode/
+
+.DS_Store
+Thumbs.db

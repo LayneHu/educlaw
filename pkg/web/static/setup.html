@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduClaw - 启动引导</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", Arial, sans-serif;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(59,130,246,0.18), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(16,185,129,0.16), transparent 26%),
+      #eef4fb;
+    color: #1f2937;
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 40px; }
+  .hero {
+    display: flex; justify-content: space-between; gap: 24px; align-items: flex-start;
+    margin-bottom: 22px;
+  }
+  .hero-card, .status-card, .form-card, .models-card {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(148,163,184,0.18);
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15,23,42,0.08);
+    backdrop-filter: blur(10px);
+  }
+  .hero-card { flex: 1; padding: 28px; }
+  .hero-card h1 { font-size: 2rem; margin-bottom: 10px; }
+  .hero-card p { color: #475569; line-height: 1.7; max-width: 760px; }
+  .status-card { width: 320px; padding: 22px; }
+  .status-title { font-size: 0.86rem; letter-spacing: 0.08em; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 999px; font-size: 0.9rem; font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .status-pill.pending { background: #fff7ed; color: #c2410c; }
+  .status-pill.ready { background: #ecfdf5; color: #047857; }
+  .status-meta { color: #475569; font-size: 0.92rem; line-height: 1.7; }
+  .layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 22px; }
+  .models-card, .form-card { padding: 22px; }
+  .section-title { font-size: 1.05rem; margin-bottom: 14px; }
+  .section-note { color: #64748b; font-size: 0.9rem; margin-bottom: 18px; line-height: 1.6; }
+  .model-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .model-card {
+    border: 1px solid #dbe4f0; border-radius: 16px; padding: 16px; cursor: pointer;
+    background: linear-gradient(180deg, rgba(248,250,252,0.9), rgba(255,255,255,1));
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; box-shadow: 0 12px 30px rgba(59,130,246,0.12); }
+  .model-card.selected { border-color: #2563eb; box-shadow: 0 14px 30px rgba(37,99,235,0.14); }
+  .model-provider { color: #2563eb; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .model-label { font-size: 1rem; font-weight: 700; margin: 8px 0 6px; }
+  .model-id { font-family: Consolas, monospace; font-size: 0.8rem; color: #334155; margin-bottom: 8px; word-break: break-all; }
+  .model-note { color: #64748b; font-size: 0.86rem; line-height: 1.55; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 0.86rem; color: #334155; font-weight: 600; }
+  .field input {
+    border: 1px solid #dbe4f0; border-radius: 12px; padding: 11px 13px; font-size: 0.94rem;
+    outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+  .actions { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
+  .btn {
+    border: none; border-radius: 999px; padding: 11px 18px; cursor: pointer; font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .btn-primary { background: linear-gradient(135deg, #2563eb, #0f766e); color: white; }
+  .btn-link { background: #eff6ff; color: #1d4ed8; text-decoration: none; }
+  .result {
+    margin-top: 16px; padding: 14px 16px; border-radius: 14px; font-size: 0.92rem; line-height: 1.6; display: none;
+  }
+  .result.show { display: block; }
+  .result.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .result.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .counts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .count-chip {
+    padding: 6px 10px; border-radius: 999px; background: #f8fafc; color: #334155; font-size: 0.84rem;
+    border: 1px solid #e2e8f0;
+  }
+  @media (max-width: 980px) {
+    .hero, .layout { grid-template-columns: 1fr; display: grid; }
+    .status-card { width: auto; }
+    .model-grid, .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hero">
+    <div class="hero-card">
+      <h1>EduClaw 启动引导</h1>
+      <p>先选一个模型，再补一位教师的基础信息，系统就能以当前教学框架启动。模型配置已切到 `model_list` 机制，推荐项参考了 `demo` 的 provider 适配方式。</p>
+    </div>
+    <div class="status-card">
+      <div class="status-title">当前状态</div>
+      <div class="status-pill pending" id="statusPill">检测中...</div>
+      <div class="status-meta" id="statusMeta">正在读取系统配置。</div>
+      <div class="counts" id="actorCounts"></div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="models-card">
+      <div class="section-title">1. 选择模型</div>
+      <div class="section-note">推荐模型卡片会自动填充 provider、model 和 api_base。你仍然可以在右侧手动修改。</div>
+      <div class="model-grid" id="modelGrid"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-title">2. 填写基础信息</div>
+      <div class="section-note">保存后会写入正式配置文件。由于当前运行时不会热切换 provider，保存成功后请重启 `educlaw serve`。</div>
+      <form id="setupForm">
+        <div class="form-grid">
+          <div class="field">
+            <label for="provider">Provider</label>
+            <input id="provider" name="provider" placeholder="例如 minimax / openai" required>
+          </div>
+          <div class="field">
+            <label for="model">Model</label>
+            <input id="model" name="model" placeholder="例如 MiniMax-M2.5" required>
+          </div>
+          <div class="field full">
+            <label for="apiKey">API Key</label>
+            <input id="apiKey" name="api_key" placeholder="输入 API key；本地 Ollama 可留空">
+          </div>
+          <div class="field full">
+            <label for="apiBase">API Base</label>
+            <input id="apiBase" name="api_base" placeholder="例如 https://api.minimaxi.com/v1">
+          </div>
+          <div class="field full">
+            <label for="proxy">Proxy</label>
+            <input id="proxy" name="proxy" placeholder="可选，例如 http://127.0.0.1:7897">
+          </div>
+          <div class="field">
+            <label for="teacherName">教师姓名</label>
+            <input id="teacherName" name="teacher_name" placeholder="例如 张老师">
+          </div>
+          <div class="field">
+            <label for="teacherSubject">授课科目</label>
+            <input id="teacherSubject" name="teacher_subject" placeholder="例如 数学">
+          </div>
+          <div class="field">
+            <label for="schoolName">学校</label>
+            <input id="schoolName" name="school_name" placeholder="例如 实验小学">
+          </div>
+          <div class="field">
+            <label for="teacherGrade">年级</label>
+            <input id="teacherGrade" name="teacher_grade" placeholder="例如 五年级">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">保存并完成引导</button>
+          <a class="btn btn-link" href="/teacher">直接进入教师端</a>
+        </div>
+      </form>
+      <div class="result" id="resultBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedModelId = '';
+
+window.addEventListener('load', async () => {
+  const status = await loadStatus();
+  bindForm();
+  if (status && Array.isArray(status.recommended_models) && status.recommended_models.length) {
+    renderModels(status.recommended_models, status);
+  }
+});
+
+async function loadStatus() {
+  const res = await fetch('/api/setup/status');
+  const data = await res.json();
+
+  const pill = document.getElementById('statusPill');
+  const meta = document.getElementById('statusMeta');
+  const counts = document.getElementById('actorCounts');
+  counts.innerHTML = '';
+
+  if (data.needs_setup) {
+    pill.className = 'status-pill pending';
+    pill.textContent = '需要完成引导';
+  } else {
+    pill.className = 'status-pill ready';
+    pill.textContent = '系统已配置';
+  }
+
+  meta.innerHTML = `
+    配置文件：${escapeHtml(data.config_path || '')}<br>
+    当前模型：${escapeHtml(data.model_name || '未设置')} -> ${escapeHtml(data.provider || '未设置')} / ${escapeHtml(data.model || '未设置')}<br>
+    工作目录：${escapeHtml(data.workspace || '')}
+  `;
+
+  for (const [key, value] of Object.entries(data.actor_counts || {})) {
+    const chip = document.createElement('div');
+    chip.className = 'count-chip';
+    chip.textContent = `${translateActor(key)} ${value}`;
+    counts.appendChild(chip);
+  }
+
+  if (data.provider) document.getElementById('provider').value = data.provider;
+  if (data.model) document.getElementById('model').value = data.model;
+  if (data.has_api_key) document.getElementById('apiKey').placeholder = '当前已配置 API key；如需替换请重新输入';
+
+  return data;
+}
+
+function renderModels(models, status) {
+  const grid = document.getElementById('modelGrid');
+  grid.innerHTML = '';
+  models.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'model-card';
+    if (status.model_name === item.id) {
+      div.classList.add('selected');
+      selectedModelId = item.id;
+    }
+    div.innerHTML = `
+      <div class="model-provider">${escapeHtml(item.provider)}</div>
+      <div class="model-label">${escapeHtml(item.label)}</div>
+      <div class="model-id">${escapeHtml(item.model)}</div>
+      <div class="model-note">${escapeHtml(item.note)}</div>
+    `;
+    div.addEventListener('click', () => selectModel(item, div));
+    grid.appendChild(div);
+  });
+}
+
+function selectModel(item, el) {
+  selectedModelId = item.id;
+  document.querySelectorAll('.model-card').forEach(card => card.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('provider').value = item.provider || '';
+  document.getElementById('model').value = item.model || '';
+  document.getElementById('apiBase').value = item.api_base || '';
+}
+
+function bindForm() {
+  document.getElementById('setupForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+
+    const res = await fetch('/api/setup/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    const box = document.getElementById('resultBox');
+    if (!res.ok) {
+      box.className = 'result show error';
+      box.textContent = data.error || '保存失败';
+      return;
+    }
+
+    box.className = 'result show success';
+    box.innerHTML = `配置已写入 ${escapeHtml(data.config_path || '')}。当前运行进程需要重启后才能切换到新模型。<br>重启后建议先进入教师端检查学情面板和对话页。`;
+    await loadStatus();
+    setTimeout(() => { window.location.href = '/teacher'; }, 1800);
+  });
+}
+
+function translateActor(key) {
+  return { student: '学生', family: '家长', teacher: '教师' }[key] || key;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(text || ''));
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

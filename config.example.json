@@ -1,0 +1,56 @@
+{
+  "_comment": "EduClaw 配置示例。使用 model_list 管理所有模型，llm.primary.model 和 llm.fallbacks[].model 填写的都是 model_name。",
+  "_providers": "可选 provider: minimax, openai, deepseek, gemini, anthropic, openrouter, groq, ollama, zhipu, mistral, moonshot, nvidia, litellm",
+
+  "llm": {
+    "primary": {
+      "model": "minimax-default"
+    },
+    "fallbacks": [
+      {
+        "model": "gpt-4o-mini"
+      }
+    ]
+  },
+
+  "model_list": [
+    {
+      "model_name": "minimax-default",
+      "provider": "minimax",
+      "model": "MiniMax-M2.5",
+      "api_key": "your-minimax-api-key-here",
+      "api_base": "https://api.minimaxi.com/v1"
+    },
+    {
+      "model_name": "gpt-4o-mini",
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "api_key": "sk-your-openai-key-here",
+      "api_base": "https://api.openai.com/v1"
+    }
+  ],
+
+  "_model_list_note": "新增模型时，直接在 model_list 中增加条目，然后让 llm.primary.model 或 llm.fallbacks[].model 指向对应的 model_name。",
+
+  "workspace": "~/.educlaw",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 18080
+  },
+  "agent": {
+    "max_iterations": 15,
+    "temperature": 0.7,
+    "max_tokens": 8192
+  },
+  "health": {
+    "enabled": true
+  },
+  "skills": {
+    "builtin_dir": "./skills"
+  },
+  "heartbeat": {
+    "enabled": false,
+    "interval_minutes": 30
+  },
+  "_security_note": "不要把真实 API key 提交到仓库。开源发布时只保留这个示例文件，本地使用 config.json。"
+}

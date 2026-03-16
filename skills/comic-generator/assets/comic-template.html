@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学习漫画</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: #fef9f0;
+    padding: 16px;
+  }
+  .comic-title {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #2d3748;
+    margin-bottom: 12px;
+    text-shadow: 1px 1px 0 #e2c87a;
+    letter-spacing: 2px;
+  }
+  .comic-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    max-width: 700px;
+    margin: 0 auto;
+    border: 3px solid #2d3748;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    border: 2px solid #2d3748;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Backgrounds */
+  .bg-sky        { background: linear-gradient(180deg, #87ceeb 0%, #e0f4ff 70%, #a8d5a2 100%); }
+  .bg-classroom  { background: linear-gradient(180deg, #f0e6d3 0%, #e8dcc8 60%, #c8a87a 100%); }
+  .bg-night      { background: linear-gradient(180deg, #1a1a3e 0%, #2d2d6b 60%, #4a4a8a 100%); }
+  .bg-nature     { background: linear-gradient(180deg, #90ee90 0%, #56ab2f 50%, #a8e063 100%); }
+  .bg-space      { background: radial-gradient(ellipse at center, #2c3e7a 0%, #0a0a1a 100%); }
+  .bg-lab        { background: linear-gradient(180deg, #e8f4f8 0%, #c8e6f0 60%, #a8d4e8 100%); }
+
+  /* Speech bubble */
+  .speech {
+    background: white;
+    border: 2.5px solid #2d3748;
+    border-radius: 14px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a202c;
+    text-align: center;
+    position: relative;
+    max-width: 100%;
+    line-height: 1.4;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
+    z-index: 2;
+  }
+  .speech::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #2d3748;
+  }
+  .speech::before {
+    content: '';
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: white;
+    z-index: 1;
+  }
+
+  /* Character */
+  .character {
+    font-size: 2.6rem;
+    text-align: center;
+    margin: 6px 0 2px;
+    filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.2));
+    z-index: 2;
+  }
+
+  /* Caption */
+  .caption {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(0,0,0,0.55);
+    background: rgba(255,255,255,0.7);
+    padding: 2px 7px;
+    border-radius: 10px;
+    align-self: flex-start;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Night/space text color fixes */
+  .bg-night .caption,
+  .bg-space .caption { color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.4); }
+  .bg-night .speech,
+  .bg-space .speech  { background: #e8e0ff; border-color: #6b46c1; color: #1a0040; }
+  .bg-night .speech::after  { border-top-color: #6b46c1; }
+  .bg-night .speech::before { border-top-color: #e8e0ff; }
+  .bg-space .speech::after  { border-top-color: #6b46c1; }
+  .bg-space .speech::before { border-top-color: #e8e0ff; }
+
+  /* Stars for night/space */
+  .bg-night::before,
+  .bg-space::before {
+    content: '✦ ✧ ✦';
+    position: absolute;
+    top: 6px;
+    right: 4px;
+    font-size: 0.55rem;
+    color: rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+
+  /* Ground line for sky/nature */
+  .bg-sky::after {
+    content: '';
+    position: absolute;
+    bottom: 22px;
+    left: 0; right: 0;
+    height: 2px;
+    background: rgba(0,100,0,0.3);
+  }
+
+  .comic-footer {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #718096;
+  }
+</style>
+</head>
+<body>
+
+<div class="comic-title" id="comicTitle">学习漫画</div>
+
+<div class="comic-grid" id="comicGrid"></div>
+
+<div class="comic-footer">📚 EduClaw 学习漫画 · 知知出品</div>
+
+<script>
+// ============================================================
+// CUSTOMIZE THIS SECTION
+// ============================================================
+const COMIC_CONFIG = {
+  title: "分数的故事",
+  panels: [
+    { bg: "classroom", character: "🧒",    speech: "分数好难啊，我完全不懂！",  caption: "第一幕" },
+    { bg: "sky",       character: "🤖",    speech: "别担心！我来帮你用披萨解释", caption: "第二幕" },
+    { bg: "nature",    character: "🍕",    speech: "把披萨切成4份，取1份就是1/4", caption: "发现！" },
+    { bg: "classroom", character: "🧒🤖", speech: "原来分数就是等分后取几份！",  caption: "明白了！" },
+    { bg: "sky",       character: "🧒",    speech: "1/2 + 1/4 = 3/4，我会啦！",  caption: "练习" },
+    { bg: "nature",    character: "🌟",    speech: "太棒了！数学其实很有趣！",   caption: "结局" },
+  ]
+};
+// ============================================================
+
+function renderComic() {
+  document.getElementById('comicTitle').textContent = COMIC_CONFIG.title;
+  const grid = document.getElementById('comicGrid');
+  grid.innerHTML = '';
+
+  COMIC_CONFIG.panels.forEach(panel => {
+    const div = document.createElement('div');
+    div.className = `panel bg-${panel.bg}`;
+    div.innerHTML = `
+      <div class="caption">${escapeHtml(panel.caption)}</div>
+      <div class="speech">${escapeHtml(panel.speech)}</div>
+      <div class="character">${panel.character}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+renderComic();
+</script>
+</body>
+</html>

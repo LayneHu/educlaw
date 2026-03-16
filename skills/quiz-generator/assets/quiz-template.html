@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识测验</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .quiz-container {
+    background: white; border-radius: 20px; padding: 28px;
+    max-width: 580px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .quiz-header { text-align: center; margin-bottom: 22px; }
+  .quiz-title { font-size: 1.4rem; font-weight: 700; color: #2d3748; }
+  .progress { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .progress-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #43e97b, #38f9d7); transition: width 0.3s; }
+  .progress-text { font-size: 0.82rem; color: #718096; white-space: nowrap; }
+
+  .question-card { background: #f7fafc; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  .q-num { font-size: 0.8rem; color: #718096; margin-bottom: 8px; }
+  .q-text { font-size: 1.05rem; color: #2d3748; font-weight: 500; line-height: 1.5; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .opt-btn {
+    padding: 13px 16px; border: 2px solid #e2e8f0; border-radius: 10px;
+    font-size: 0.95rem; cursor: pointer; background: white; color: #2d3748;
+    text-align: left; transition: all 0.2s;
+  }
+  .opt-btn:hover:not(:disabled) { border-color: #43e97b; background: #f0fff4; }
+  .opt-btn.correct { background: #c6f6d5; border-color: #48bb78; color: #22543d; }
+  .opt-btn.wrong   { background: #fed7d7; border-color: #fc8181; color: #742a2a; }
+
+  .explanation {
+    background: #ebf8ff; border-left: 4px solid #4299e1;
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+    font-size: 0.88rem; color: #2b6cb0; margin-top: 12px; display: none;
+  }
+  .explanation.visible { display: block; }
+
+  .btn-next {
+    width: 100%; padding: 13px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+    margin-top: 14px; display: none;
+  }
+  .btn-next.visible { display: block; }
+
+  .result { text-align: center; padding: 20px; display: none; }
+  .result.visible { display: block; }
+  .result-emoji { font-size: 3rem; margin-bottom: 12px; }
+  .result-text { font-size: 1.2rem; font-weight: 700; color: #2d3748; margin-bottom: 8px; }
+  .result-sub { color: #718096; margin-bottom: 20px; }
+  .btn-restart {
+    padding: 12px 28px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="quiz-container">
+  <div class="quiz-header">
+    <div class="quiz-title" id="quizTitle">知识测验</div>
+  </div>
+  <div class="progress">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-text" id="progressText">0 / 0</div>
+  </div>
+
+  <div id="quizBody">
+    <div class="question-card">
+      <div class="q-num" id="qNum">题目 1</div>
+      <div class="q-text" id="qText">加载中...</div>
+    </div>
+    <div class="options" id="optionsList"></div>
+    <div class="explanation" id="explanation"></div>
+    <button class="btn-next" id="btnNext" onclick="nextQuestion()">下一题 →</button>
+  </div>
+
+  <div class="result" id="resultBox">
+    <div class="result-emoji" id="resultEmoji">🎊</div>
+    <div class="result-text" id="resultText"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <button class="btn-restart" onclick="restart()">重新测验</button>
+  </div>
+</div>
+
+<script>
+const QUIZ = {
+  title: "数学小测验",
+  questions: [
+    {
+      q: "1/2 + 1/4 等于多少？",
+      options: ["1/6", "3/4", "2/6", "1/3"],
+      answer: 1,
+      explanation: "通分：1/2 = 2/4，所以 2/4 + 1/4 = 3/4"
+    },
+    {
+      q: "下列哪个分数等于 0.5？",
+      options: ["1/3", "2/5", "1/2", "3/4"],
+      answer: 2,
+      explanation: "0.5 = 5/10 = 1/2"
+    }
+  ]
+};
+
+let cur = 0, score = 0, answered = false;
+
+function init() {
+  document.getElementById('quizTitle').textContent = QUIZ.title;
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = QUIZ.questions[cur];
+  const total = QUIZ.questions.length;
+  document.getElementById('qNum').textContent = `题目 ${cur + 1} / ${total}`;
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('progressText').textContent = `${cur} / ${total}`;
+  document.getElementById('progressFill').style.width = (cur / total * 100) + '%';
+  document.getElementById('explanation').className = 'explanation';
+  document.getElementById('btnNext').className = 'btn-next';
+  answered = false;
+
+  const list = document.getElementById('optionsList');
+  list.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = `${String.fromCharCode(65+i)}. ${opt}`;
+    btn.onclick = () => pick(i, q.answer, q.explanation);
+    list.appendChild(btn);
+  });
+}
+
+function pick(sel, correct, explanation) {
+  if (answered) return;
+  answered = true;
+  const btns = document.querySelectorAll('.opt-btn');
+  btns.forEach(b => b.disabled = true);
+  btns[correct].classList.add('correct');
+  if (sel === correct) score++;
+  else btns[sel].classList.add('wrong');
+  const exp = document.getElementById('explanation');
+  exp.textContent = '💡 ' + explanation;
+  exp.className = 'explanation visible';
+  document.getElementById('btnNext').className = 'btn-next visible';
+}
+
+function nextQuestion() {
+  cur++;
+  if (cur >= QUIZ.questions.length) showResult();
+  else showQuestion();
+}
+
+function showResult() {
+  document.getElementById('quizBody').style.display = 'none';
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressText').textContent = `${QUIZ.questions.length} / ${QUIZ.questions.length}`;
+  const box = document.getElementById('resultBox');
+  box.className = 'result visible';
+  const pct = score / QUIZ.questions.length;
+  document.getElementById('resultEmoji').textContent = pct >= 0.8 ? '🏆' : pct >= 0.6 ? '🎉' : '💪';
+  document.getElementById('resultText').textContent = `答对 ${score} / ${QUIZ.questions.length} 题`;
+  document.getElementById('resultSub').textContent = pct >= 0.8 ? '太棒了，掌握得很好！' : pct >= 0.6 ? '不错！还有提升空间。' : '继续练习，你能行的！';
+}
+
+function restart() {
+  cur = 0; score = 0;
+  document.getElementById('quizBody').style.display = '';
+  document.getElementById('resultBox').className = 'result';
+  showQuestion();
+}
+
+init();
+</script>
+</body>
+</html>

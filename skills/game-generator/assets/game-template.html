@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学习游戏</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .game-container {
+    background: white; border-radius: 20px; padding: 30px;
+    max-width: 600px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .game-header { text-align: center; margin-bottom: 24px; }
+  .game-title { font-size: 1.5rem; font-weight: 700; color: #2d3748; margin-bottom: 6px; }
+  .game-subtitle { font-size: 0.9rem; color: #718096; }
+
+  .score-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f7fafc; border-radius: 10px; padding: 10px 16px;
+    margin-bottom: 24px;
+  }
+  .score-item { text-align: center; }
+  .score-num { font-size: 1.4rem; font-weight: 700; color: #667eea; }
+  .score-label { font-size: 0.75rem; color: #718096; }
+
+  .question-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; border-radius: 16px; padding: 24px;
+    text-align: center; margin-bottom: 20px;
+    min-height: 100px; display: flex; align-items: center; justify-content: center;
+  }
+  .question-text { font-size: 1.6rem; font-weight: 600; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .option-btn {
+    padding: 16px; border: 2px solid #e2e8f0; border-radius: 12px;
+    font-size: 1.1rem; font-weight: 600; cursor: pointer;
+    background: white; color: #2d3748; transition: all 0.2s;
+  }
+  .option-btn:hover { border-color: #667eea; background: #ebf4ff; transform: translateY(-2px); }
+  .option-btn.correct { background: #c6f6d5; border-color: #48bb78; color: #22543d; }
+  .option-btn.wrong   { background: #fed7d7; border-color: #fc8181; color: #742a2a; }
+  .option-btn:disabled { cursor: not-allowed; transform: none; }
+
+  .feedback {
+    text-align: center; padding: 14px; border-radius: 10px;
+    font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: none;
+  }
+  .feedback.correct { background: #c6f6d5; color: #22543d; display: block; }
+  .feedback.wrong   { background: #fed7d7; color: #742a2a; display: block; }
+
+  .next-btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+    display: none; transition: opacity 0.2s;
+  }
+  .next-btn:hover { opacity: 0.9; }
+  .next-btn.visible { display: block; }
+
+  .game-over {
+    text-align: center; padding: 30px; display: none;
+  }
+  .game-over.visible { display: block; }
+  .game-over-title { font-size: 2rem; margin-bottom: 12px; }
+  .game-over-score { font-size: 1.2rem; color: #667eea; margin-bottom: 20px; }
+  .restart-btn {
+    padding: 14px 32px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+
+  .progress-bar { height: 8px; background: #e2e8f0; border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; transition: width 0.3s ease; }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <div class="game-header">
+    <div class="game-title" id="gameTitle">数学练习游戏</div>
+    <div class="game-subtitle" id="gameSubtitle">答对题目获得分数！</div>
+  </div>
+
+  <div class="score-bar">
+    <div class="score-item"><div class="score-num" id="scoreNum">0</div><div class="score-label">得分</div></div>
+    <div class="score-item"><div class="score-num" id="questionNum">1</div><div class="score-label">题目</div></div>
+    <div class="score-item"><div class="score-num" id="totalNum">10</div><div class="score-label">总题数</div></div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+  <div id="gamePlay">
+    <div class="question-box"><div class="question-text" id="questionText">加载中...</div></div>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">下一题 →</button>
+  </div>
+
+  <div class="game-over" id="gameOver">
+    <div class="game-over-title" id="gameOverEmoji">🎉</div>
+    <div class="game-over-score" id="gameOverScore"></div>
+    <button class="restart-btn" onclick="restartGame()">再玩一次</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CUSTOMIZE THIS SECTION FOR YOUR GAME
+// ============================================================
+const GAME_CONFIG = {
+  title: "数学练习",
+  subtitle: "测试你的数学能力！",
+  questions: [
+    { q: "2 + 3 = ?", options: ["4", "5", "6", "7"], answer: 1 },
+    { q: "8 - 5 = ?", options: ["2", "3", "4", "5"], answer: 1 },
+    { q: "3 × 4 = ?", options: ["10", "11", "12", "13"], answer: 2 },
+    { q: "15 ÷ 3 = ?", options: ["3", "4", "5", "6"], answer: 2 },
+    { q: "7 + 8 = ?", options: ["14", "15", "16", "17"], answer: 1 },
+  ]
+};
+// ============================================================
+
+let currentQ = 0;
+let score = 0;
+let answered = false;
+
+function init() {
+  document.getElementById('gameTitle').textContent = GAME_CONFIG.title;
+  document.getElementById('gameSubtitle').textContent = GAME_CONFIG.subtitle;
+  document.getElementById('totalNum').textContent = GAME_CONFIG.questions.length;
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = GAME_CONFIG.questions[currentQ];
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('questionNum').textContent = currentQ + 1;
+  document.getElementById('progressFill').style.width = (currentQ / GAME_CONFIG.questions.length * 100) + '%';
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i, btn, q.answer);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextBtn').className = 'next-btn';
+  answered = false;
+}
+
+function checkAnswer(selected, btn, correct) {
+  if (answered) return;
+  answered = true;
+
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true);
+  btns[correct].classList.add('correct');
+
+  const feedback = document.getElementById('feedback');
+  if (selected === correct) {
+    score++;
+    document.getElementById('scoreNum').textContent = score;
+    btn.classList.add('correct');
+    feedback.textContent = '✅ 答对了！真棒！';
+    feedback.className = 'feedback correct';
+  } else {
+    btn.classList.add('wrong');
+    feedback.textContent = `❌ 答错了。正确答案是: ${GAME_CONFIG.questions[currentQ].options[correct]}`;
+    feedback.className = 'feedback wrong';
+  }
+
+  document.getElementById('nextBtn').className = 'next-btn visible';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= GAME_CONFIG.questions.length) {
+    showGameOver();
+  } else {
+    showQuestion();
+  }
+}
+
+function showGameOver() {
+  document.getElementById('gamePlay').style.display = 'none';
+  const gameOver = document.getElementById('gameOver');
+  gameOver.className = 'game-over visible';
+
+  const pct = score / GAME_CONFIG.questions.length;
+  const emoji = pct >= 0.8 ? '🏆' : pct >= 0.6 ? '🎉' : pct >= 0.4 ? '💪' : '📚';
+  document.getElementById('gameOverEmoji').textContent = emoji;
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('gameOverScore').textContent =
+    `你答对了 ${score} / ${GAME_CONFIG.questions.length} 题！${pct >= 0.8 ? '太厉害了！' : pct >= 0.6 ? '不错哦！' : '继续加油！'}`;
+}
+
+function restartGame() {
+  currentQ = 0; score = 0;
+  document.getElementById('scoreNum').textContent = '0';
+  document.getElementById('gamePlay').style.display = '';
+  document.getElementById('gameOver').className = 'game-over';
+  showQuestion();
+}
+
+init();
+</script>
+</body>
+</html>

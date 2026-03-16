@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduClaw - 家长仪表盘</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white; padding: 16px 24px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 1.3rem; }
+  header .logo { font-size: 1.8rem; }
+  nav { display: flex; gap: 8px; margin-left: auto; }
+  nav a { color: white; text-decoration: none; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; background: rgba(255,255,255,0.2); }
+  nav a:hover { background: rgba(255,255,255,0.35); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+  .card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 20px;
+  }
+  .card h3 { font-size: 1rem; color: #2d3748; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+
+  .stat-card { text-align: center; }
+  .stat-num { font-size: 2.2rem; font-weight: 700; color: #f093fb; }
+  .stat-label { font-size: 0.82rem; color: #718096; margin-top: 4px; }
+
+  .student-card { background: white; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; }
+  .student-name { font-weight: 600; color: #2d3748; margin-bottom: 10px; }
+  .subject-row { margin-bottom: 8px; }
+  .subject-name { font-size: 0.8rem; color: #718096; margin-bottom: 3px; }
+  .bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .high { background: #48bb78; }
+  .mid  { background: #ed8936; }
+  .low  { background: #fc8181; }
+
+  /* Chat section — full-width column */
+  .chat-wrap { grid-column: 1 / -1; }
+  .chat-messages {
+    height: 380px; overflow-y: auto;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 12px; margin-bottom: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .msg { max-width: 78%; padding: 9px 13px; border-radius: 10px; font-size: 0.88rem; line-height: 1.5; }
+  .msg.user { align-self: flex-end; background: #f093fb; color: white; }
+  .msg.ai   { align-self: flex-start; background: #f7fafc; color: #2d3748; border: 1px solid #e2e8f0; }
+  .msg.ai.streaming { border-color: #f093fb; }
+
+  /* Rendered content card inside chat */
+  .rendered-card {
+    align-self: flex-start;
+    max-width: min(1200px, 95%);
+    background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .rendered-header {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white; font-size: 0.85rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .rendered-title { display: flex; align-items: center; gap: 6px; }
+  .rendered-open-btn {
+    background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px; padding: 5px 10px; font-size: 0.75rem; cursor: pointer;
+  }
+  .rendered-open-btn:hover { background: rgba(255,255,255,0.28); }
+  .rendered-iframe { width: 100%; border: none; min-height: 620px; display: block; background: white; }
+  .rendered-modal {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.68); display: none;
+    align-items: center; justify-content: center; padding: 18px; z-index: 9999;
+  }
+  .rendered-modal.open { display: flex; }
+  .rendered-modal-card {
+    width: min(1400px, 96vw); height: min(92vh, 980px);
+    background: white; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.35); display: flex; flex-direction: column;
+  }
+  .rendered-modal-header {
+    padding: 12px 16px; background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .rendered-modal-title { font-size: 0.95rem; font-weight: 700; }
+  .rendered-close-btn {
+    background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; cursor: pointer;
+  }
+  .rendered-close-btn:hover { background: rgba(255,255,255,0.28); }
+  .rendered-modal-iframe { flex: 1; width: 100%; border: none; background: white; }
+
+  /* Thinking / tool log */
+  .thinking-wrap { align-self: flex-start; max-width: 85%; margin-bottom: 2px; }
+  .thinking-toggle {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.76rem; color: #d53f8c; cursor: pointer;
+    background: #fff0f7; border: 1px solid #f9a8d4;
+    border-radius: 20px; padding: 3px 10px; user-select: none;
+  }
+  .thinking-toggle:hover { background: #ffe4f0; }
+  .thinking-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+  .thinking-toggle.open .arrow { transform: rotate(90deg); }
+  .thinking-body {
+    display: none; background: #fff5fb; border: 1px solid #fce7f3;
+    border-radius: 8px; margin-top: 4px; padding: 6px 10px;
+    font-size: 0.76rem; color: #831843; line-height: 1.6;
+  }
+  .thinking-body.open { display: block; }
+  .tool-line { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; }
+  .tool-line .tl-icon { flex-shrink: 0; width: 16px; text-align: center; }
+  .tl-phase-call { color: #b83280; font-weight: 600; }
+  .tl-phase-result { color: #2f855a; }
+  .tl-text { word-break: break-all; }
+  .tool-name { font-weight: 600; }
+  .tl-summary { color: #718096; font-size: 0.73rem; }
+
+  .input-row { display: flex; gap: 8px; }
+  .input-row textarea {
+    flex: 1; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+    font-size: 0.9rem; outline: none; resize: none; font-family: inherit;
+    max-height: 100px; line-height: 1.4;
+  }
+  .input-row textarea:focus { border-color: #f093fb; }
+  .btn-send {
+    padding: 10px 20px; background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+    align-self: flex-end;
+  }
+  .btn-send:hover { opacity: 0.85; }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .parent-selector { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .parent-selector select { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none; }
+  .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.88rem; border: none; }
+  .btn-primary { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+  .btn-primary:hover { opacity: 0.85; }
+
+  .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
+  .dot { width: 7px; height: 7px; background: #f093fb; border-radius: 50%; animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-7px); } }
+
+  .streaming-cursor::after { content: '▋'; animation: blink 1s step-end infinite; color: #f093fb; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">👨‍👩‍👧</div>
+  <div>
+    <h1>EduClaw 家长仪表盘</h1>
+    <div style="font-size:0.82rem;opacity:0.85">了解孩子的学习旅程</div>
+  </div>
+  <nav>
+    <a href="/student">学生端</a>
+  </nav>
+</header>
+
+<div class="container">
+  <!-- Selector -->
+  <div class="parent-selector">
+    <label style="font-size:0.9rem;color:#4a5568">家长账号：</label>
+    <select id="parentSelect">
+      <option value="">-- 请选择 --</option>
+    </select>
+    <button class="btn btn-primary" onclick="loadReport()">加载报告</button>
+    <input type="text" id="newParentName" placeholder="新家长姓名"
+      style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;outline:none;" />
+    <button class="btn btn-primary" onclick="createParent()">+ 注册</button>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid-3" id="statsRow" style="display:none">
+    <div class="card stat-card">
+      <div class="stat-num" id="stat-students">0</div>
+      <div class="stat-label">学习中的孩子</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-num" id="stat-kp">0</div>
+      <div class="stat-label">已学知识点</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-num" id="stat-avg">0%</div>
+      <div class="stat-label">平均掌握度</div>
+    </div>
+  </div>
+
+  <!-- Students Grid -->
+  <div id="studentsGrid" class="grid" style="display:none"></div>
+
+  <!-- AI Chat -->
+  <div class="grid" id="chatSection" style="display:none">
+    <div class="card chat-wrap">
+      <h3>💬 AI 家长顾问</h3>
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg ai">您好！我是 EduClaw 家长顾问知知。
+可以帮您：查看孩子学习报告、生成可视化分析、了解薄弱知识点、获取学习建议。
+请问有什么需要帮助的吗？</div>
+      </div>
+      <div class="input-row">
+        <textarea id="chatInput" placeholder="例如：帮我生成孩子的学习报告、分析最近的学习情况..." rows="2"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="btn-send" id="sendBtn" onclick="sendChat()" disabled>发送</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rendered-modal" id="renderedModal" onclick="closeRenderedModal(event)">
+  <div class="rendered-modal-card">
+    <div class="rendered-modal-header">
+      <div class="rendered-modal-title" id="renderedModalTitle">内容预览</div>
+      <button class="rendered-close-btn" onclick="closeRenderedModal()">关闭</button>
+    </div>
+    <iframe class="rendered-modal-iframe" id="renderedModalFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+let currentParentID = '';
+let currentSessionID = '';
+let isStreaming = false;
+let eventSource = null;
+let currentAIBubble = null;
+let currentThinkingWrap = null;
+let currentThinkingBody = null;
+let streamBuffer = '';
+let currentAIMsg = null;
+let currentRenderURLs = [];
+
+window.addEventListener('load', loadParents);
+
+async function loadParents() {
+  try {
+    const res = await fetch('/api/actors/family');
+    const data = await res.json();
+    const sel = document.getElementById('parentSelect');
+    (data.actors || []).forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function createParent() {
+  const name = document.getElementById('newParentName').value.trim();
+  if (!name) { alert('请输入姓名'); return; }
+  try {
+    const res = await fetch('/api/onboard', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({actor_type:'family', name})
+    });
+    const data = await res.json();
+    const opt = document.createElement('option');
+    opt.value = data.id; opt.textContent = data.name;
+    document.getElementById('parentSelect').appendChild(opt);
+    document.getElementById('parentSelect').value = data.id;
+    document.getElementById('newParentName').value = '';
+    selectParent(data.id);
+  } catch(e) { alert('注册失败: ' + e); }
+}
+
+async function loadReport() {
+  const sel = document.getElementById('parentSelect');
+  if (!sel.value) { alert('请先选择家长账号'); return; }
+  selectParent(sel.value);
+}
+
+function selectParent(id) {
+  currentParentID = id;
+  currentSessionID = '';
+  document.getElementById('sendBtn').disabled = false;
+
+  document.getElementById('statsRow').style.display = '';
+  document.getElementById('studentsGrid').style.display = '';
+  document.getElementById('chatSection').style.display = '';
+
+  fetchReport(id);
+}
+
+async function fetchReport(parentID) {
+  try {
+    const res = await fetch(`/api/parent/${parentID}/report`);
+    const data = await res.json();
+
+    const students = data.students || [];
+    document.getElementById('stat-students').textContent = students.length;
+
+    let totalKP = 0, totalMastery = 0, kpCount = 0;
+    students.forEach(s => {
+      Object.values(s.knowledge || {}).forEach(kps => {
+        kps.forEach(kp => { totalKP++; totalMastery += kp.mastery; kpCount++; });
+      });
+    });
+    document.getElementById('stat-kp').textContent = totalKP;
+    document.getElementById('stat-avg').textContent = kpCount ? Math.round(totalMastery/kpCount) + '%' : '0%';
+
+    const grid = document.getElementById('studentsGrid');
+    grid.innerHTML = '';
+    if (!students.length) {
+      grid.innerHTML = '<div class="card" style="grid-column:1/-1;text-align:center;color:#a0aec0;padding:30px">暂无关联学生。注册学生时请设置相同的 family_id。</div>';
+      return;
+    }
+    students.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      let subjectHTML = '';
+      Object.entries(s.knowledge || {}).forEach(([sub, kps]) => {
+        const avg = kps.reduce((a,b) => a+b.mastery, 0) / (kps.length||1);
+        const cls = avg >= 70 ? 'high' : avg >= 40 ? 'mid' : 'low';
+        subjectHTML += `<div class="subject-row">
+          <div class="subject-name">${sub} (${Math.round(avg)}%)</div>
+          <div class="bar"><div class="bar-fill ${cls}" style="width:${avg}%"></div></div>
+        </div>`;
+      });
+      card.innerHTML = `<h3>👦 ${s.name}${s.grade ? ' · ' + s.grade : ''}</h3>${subjectHTML || '<p style="color:#a0aec0;font-size:0.85rem">暂无学习记录</p>'}`;
+      grid.appendChild(card);
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ---- Chat (same SSE-first pattern as student.html) ----
+
+function ensureThinkingPanel() {
+  if (currentThinkingWrap) return;
+  const msgs = document.getElementById('chatMessages');
+  prepareAITurn();
+  const wrap = document.createElement('div');
+  wrap.className = 'thinking-wrap';
+  const toggle = document.createElement('div');
+  toggle.className = 'thinking-toggle open';
+  toggle.innerHTML = `<span class="arrow">▶</span> 思考过程 <span class="tl-count">0</span> 步`;
+  const body = document.createElement('div');
+  body.className = 'thinking-body open';
+  toggle.onclick = () => {
+    const open = body.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+  };
+  wrap.appendChild(toggle);
+  wrap.appendChild(body);
+  insertAfterCurrentTurn(wrap);
+  currentThinkingWrap = wrap;
+  currentThinkingBody = body;
+}
+
+const toolLabels = {
+  list_workspace_files: ['📂', '列出文件'],
+  read_workspace_file:  ['📄', '读取文件'],
+  write_workspace_file: ['✏️', '写入文件'],
+  add_daily_note:       ['📝', '记录日志'],
+  record_answer:        ['📊', '记录答题'],
+  query_knowledge:      ['🔍', '查询知识'],
+  render_content:       ['🎨', '渲染内容'],
+  read_skill:           ['⚡', '加载技能'],
+};
+
+function addToolEvent(ev) {
+  ensureThinkingPanel();
+  const line = document.createElement('div');
+  line.className = 'tool-line';
+  const [icon, label] = toolLabels[ev.tool] || ['🔧', ev.tool];
+  if (ev.phase === 'call') {
+    line.innerHTML = `<span class="tl-icon">${icon}</span>
+      <span class="tl-phase-call tl-text"><span class="tool-name">${label}</span>
+        ${ev.summary ? `<span class="tl-summary">（${escapeHtml(ev.summary)}）</span>` : ''}</span>`;
+  } else {
+    line.innerHTML = `<span class="tl-icon">↳</span>
+      <span class="tl-phase-result tl-text">${escapeHtml(ev.summary || '完成')}</span>`;
+  }
+  currentThinkingBody.appendChild(line);
+  const callCount = currentThinkingBody.querySelectorAll('.tl-phase-call').length;
+  currentThinkingWrap.querySelector('.tl-count').textContent = callCount;
+  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+}
+
+function startAIBubble() {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai streaming';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  currentAIMsg = div;
+  return div;
+}
+
+function prepareAITurn() {
+  if (currentAIBubble) return;
+  currentAIBubble = startAIBubble();
+  currentAIBubble.style.display = 'none';
+}
+
+function showCurrentAIBubble() {
+  if (!currentAIBubble) prepareAITurn();
+  currentAIBubble.style.display = '';
+}
+
+function insertAfterCurrentTurn(el) {
+  const msgs = document.getElementById('chatMessages');
+  const anchor = currentThinkingWrap || currentAIMsg;
+  if (anchor && anchor.parentNode === msgs) {
+    msgs.insertBefore(el, anchor.nextSibling);
+  } else {
+    msgs.appendChild(el);
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function buildRenderedURL(html) {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  currentRenderURLs.push(url);
+  return url;
+}
+
+function openRenderedModal(title, url) {
+  const modal = document.getElementById('renderedModal');
+  const frame = document.getElementById('renderedModalFrame');
+  document.getElementById('renderedModalTitle').textContent = title || '内容预览';
+  frame.src = url;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRenderedModal(event) {
+  if (event && event.target && event.target.id !== 'renderedModal') return;
+  const modal = document.getElementById('renderedModal');
+  const frame = document.getElementById('renderedModalFrame');
+  frame.src = 'about:blank';
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function addRenderedContent(rendered) {
+  prepareAITurn();
+  const wrap = document.createElement('div');
+  wrap.className = 'rendered-card';
+  const typeIcon = { game:'🎮', quiz:'📝', visual:'🎨', embed:'🔗', video:'📹', report:'📋' };
+  const icon = typeIcon[rendered.type] || '📄';
+  wrap.innerHTML = `
+    <div class="rendered-header">
+      <div class="rendered-title">${icon} ${rendered.title}</div>
+      <button class="rendered-open-btn" type="button">全屏查看</button>
+    </div>
+    <iframe class="rendered-iframe" sandbox="allow-scripts allow-same-origin" style="min-height:400px"></iframe>
+  `;
+  insertAfterCurrentTurn(wrap);
+  const iframe = wrap.querySelector('iframe');
+  const frameURL = buildRenderedURL(rendered.content);
+  wrap.querySelector('.rendered-open-btn').addEventListener('click', () => openRenderedModal(rendered.title, frameURL));
+  iframe.addEventListener('load', () => {
+    try {
+      const h = iframe.contentDocument.body.scrollHeight;
+      if (h > 200) iframe.style.minHeight = Math.min(h + 40, 760) + 'px';
+    } catch(e) {}
+    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+  });
+  iframe.src = frameURL;
+}
+
+async function sendChat() {
+  if (!currentParentID || isStreaming) return;
+  const input = document.getElementById('chatInput');
+  const content = input.value.trim();
+  if (!content) return;
+
+  input.value = '';
+  autoResize(input);
+
+  const msgs = document.getElementById('chatMessages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg user';
+  userDiv.textContent = content;
+  msgs.appendChild(userDiv);
+
+  // Typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'msg ai';
+  typingDiv.id = 'parentTyping';
+  typingDiv.innerHTML = '<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+  msgs.appendChild(typingDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  document.getElementById('sendBtn').disabled = true;
+  isStreaming = true;
+
+  const sessionID = crypto.randomUUID();
+  currentSessionID = sessionID;
+  currentAIBubble = null;
+  currentThinkingWrap = null;
+  currentThinkingBody = null;
+  streamBuffer = '';
+  currentAIMsg = null;
+
+  function finishStreaming() {
+    if (currentAIBubble) {
+      currentAIBubble.classList.remove('streaming-cursor', 'streaming');
+      if (!streamBuffer) {
+        currentAIMsg?.remove();
+      }
+      if (typeof marked !== 'undefined' && streamBuffer) {
+        currentAIBubble.innerHTML = marked.parse(streamBuffer);
+      }
+    }
+    if (currentThinkingBody) {
+      currentThinkingBody.classList.remove('open');
+      currentThinkingWrap.querySelector('.thinking-toggle').classList.remove('open');
+    }
+    eventSource.close();
+    isStreaming = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  // 1. Subscribe FIRST
+  eventSource = new EventSource(`/api/chat/stream/${sessionID}`);
+
+  eventSource.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'tool_call') {
+      document.getElementById('parentTyping')?.remove();
+      try { addToolEvent(JSON.parse(msg.content)); } catch(err) { console.error(err); }
+    } else if (msg.type === 'text') {
+      document.getElementById('parentTyping')?.remove();
+      prepareAITurn();
+      showCurrentAIBubble();
+      currentAIBubble.classList.add('streaming-cursor');
+      streamBuffer += msg.content;
+      currentAIBubble.textContent = streamBuffer;
+      msgs.scrollTop = msgs.scrollHeight;
+    } else if (msg.type === 'rendered') {
+      document.getElementById('parentTyping')?.remove();
+      try { addRenderedContent(JSON.parse(msg.content)); } catch(err) { console.error(err); }
+      setTimeout(() => fetchReport(currentParentID), 600);
+    } else if (msg.type === 'error') {
+      document.getElementById('parentTyping')?.remove();
+      const errDiv = document.createElement('div');
+      errDiv.className = 'msg ai';
+      errDiv.textContent = '抱歉，处理请求时出错：' + (msg.content || '未知错误');
+      msgs.appendChild(errDiv);
+      finishStreaming();
+    } else if (msg.type === 'done' || msg.done) {
+      document.getElementById('parentTyping')?.remove();
+      finishStreaming();
+    }
+  };
+
+  eventSource.onerror = () => {
+    if (isStreaming) {
+      document.getElementById('parentTyping')?.remove();
+      if (!currentAIBubble) {
+        const errDiv = document.createElement('div');
+        errDiv.className = 'msg ai';
+        errDiv.textContent = '连接中断，请检查网络后重试。';
+        msgs.appendChild(errDiv);
+      }
+      finishStreaming();
+    }
+  };
+
+  // 2. POST AFTER SSE open
+  let postSent = false;
+  eventSource.onopen = async () => {
+    if (postSent) return;
+    postSent = true;
+    try {
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          actor_id: currentParentID,
+          actor_type: 'family',
+          session_id: sessionID,
+          content
+        })
+      });
+    } catch(e) {
+      document.getElementById('parentTyping')?.remove();
+      const errDiv = document.createElement('div');
+      errDiv.className = 'msg ai';
+      errDiv.textContent = '连接错误，请检查服务器是否运行中。';
+      msgs.appendChild(errDiv);
+      finishStreaming();
+    }
+  };
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(t));
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
