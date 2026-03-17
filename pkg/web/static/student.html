@@ -420,11 +420,11 @@ function startAIMessage() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'msg ai';
-  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble" id="streamBubble"></div>`;
+  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble"></div>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   currentAIMsg = div;
-  return document.getElementById('streamBubble');
+  return div.querySelector('.msg-bubble');
 }
 
 function prepareAITurn() {
@@ -584,9 +584,12 @@ async function sendMessage() {
   document.getElementById('sendBtn').disabled = true;
   isStreaming = true;
 
-  // Generate session ID client-side so SSE can subscribe before POST
-  const sessionID = crypto.randomUUID();
-  currentSessionID = sessionID;
+  // Reuse existing session ID so the backend preserves conversation history.
+  // Generate a new one only at the start of each actor session.
+  if (!currentSessionID) {
+    currentSessionID = crypto.randomUUID();
+  }
+  const sessionID = currentSessionID;
   currentAIBubble = null;
   currentThinkingWrap = null;
   currentThinkingBody = null;

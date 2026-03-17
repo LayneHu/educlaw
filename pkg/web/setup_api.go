@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -93,7 +92,7 @@ func (s *Server) setupSnapshot() setupStatus {
 	counts := s.actorCounts()
 	isConfigured := provider.Provider != "" && provider.Model != "" && (provider.APIKey != "" || strings.EqualFold(provider.Provider, "ollama"))
 	return setupStatus{
-		NeedsSetup:   !isConfigured || counts["teacher"] == 0,
+		NeedsSetup:   !isConfigured,
 		IsConfigured: isConfigured,
 		ConfigPath:   s.configPath,
 		Workspace:    s.cfg.WorkspacePath(),
@@ -177,19 +176,19 @@ func (s *Server) HandleSetupApply(c *gin.Context) {
 		}
 		if teacherID == "" {
 			teacherID = uuid.New().String()
-			if err := storage.SaveActor(s.db, teacherID, "teacher", teacherName, strings.TrimSpace(req.TeacherGrade), strings.TrimSpace(req.TeacherSubject), ""); err != nil {
+			if err := storage.SaveActor(s.db, teacherID, "teacher", teacherName, strings.TrimSpace(req.TeacherGrade), strings.TrimSpace(req.TeacherSubject), "", ""); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 		}
 
 		dir := s.wm.TeacherDir(teacherID)
-		_ = os.MkdirAll(dir, 0755)
-		_ = s.wm.InitFromTemplate(dir, filepath.Join("workspace_templates", "teacher"))
+		_ = s.wm.InitFromEmbeddedTemplate(dir, "teacher")
 		_ = s.wm.WriteFile(dir, "PROFILE.md", buildTeacherProfile(teacherName, strings.TrimSpace(req.TeacherSubject), strings.TrimSpace(req.SchoolName), strings.TrimSpace(req.TeacherGrade)))
 	}
 
 	s.cfg = cfg
+	s.rebuildLLM(cfg)
 	c.JSON(http.StatusOK, gin.H{
 		"ok":          true,
 		"config_path": savePath,

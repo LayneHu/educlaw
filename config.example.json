@@ -52,5 +52,8 @@
     "enabled": false,
     "interval_minutes": 30
   },
+  "cron": {
+    "enabled": false
+  },
   "_security_note": "不要把真实 API key 提交到仓库。开源发布时只保留这个示例文件，本地使用 config.json。"
 }

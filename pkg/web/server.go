@@ -175,6 +175,15 @@ func (s *Server) setupRoutes() {
 	}
 }
 
+// rebuildLLM reconstructs the LLM provider from updated config and propagates
+// it to the agent loop, so changes made via the setup wizard take effect
+// immediately without restarting the server.
+func (s *Server) rebuildLLM(cfg *config.Config) {
+	p := llm.BuildProviderFromConfig(cfg)
+	s.llm = p
+	s.agentLoop.SetLLMProvider(p)
+}
+
 // Run starts the HTTP server.
 func (s *Server) Run(addr string) error {
 	return s.router.Run(addr)

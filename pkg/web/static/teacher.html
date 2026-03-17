@@ -189,6 +189,13 @@
     <button class="btn btn-primary" onclick="createTeacher()">+ 注册</button>
   </div>
 
+  <div class="teacher-selector" id="addStudentBar" style="display:none">
+    <label style="font-size:0.9rem;color:#475569">添加学生：</label>
+    <input type="text" id="newStudentName" placeholder="学生姓名">
+    <input type="text" id="newStudentGrade" placeholder="年级（如：五年级）">
+    <button class="btn btn-primary" onclick="registerStudent()">+ 注册学生</button>
+  </div>
+
   <div class="grid-4" id="statsRow" style="display:none">
     <div class="card stat-card"><div class="stat-num" id="s-students">0</div><div class="stat-label">班级学生数</div></div>
     <div class="card stat-card"><div class="stat-num" id="s-kp">0</div><div class="stat-label">覆盖知识点</div></div>
@@ -302,6 +309,23 @@ async function createTeacher() {
   loadClassReport();
 }
 
+async function registerStudent() {
+  if (!currentTeacherID) { alert('请先选择并加载教师账号'); return; }
+  const name = document.getElementById('newStudentName').value.trim();
+  const grade = document.getElementById('newStudentGrade').value.trim();
+  if (!name) { alert('请输入学生姓名'); return; }
+  const res = await fetch('/api/onboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ actor_type: 'student', name, grade, teacher_id: currentTeacherID })
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || '注册失败'); return; }
+  document.getElementById('newStudentName').value = '';
+  document.getElementById('newStudentGrade').value = '';
+  loadClassReport();
+}
+
 async function loadClassReport() {
   const sel = document.getElementById('teacherSelect');
   if (!sel.value) { alert('请先选择教师账号'); return; }
@@ -310,6 +334,7 @@ async function loadClassReport() {
   const res = await fetch(`/api/teacher/${currentTeacherID}/class-report`);
   const data = await res.json();
 
+  document.getElementById('addStudentBar').style.display = '';
   document.getElementById('statsRow').style.display = '';
   document.getElementById('reportGrid').style.display = '';
   document.getElementById('chatCard').style.display = '';
@@ -548,8 +573,10 @@ async function sendChat() {
   document.getElementById('sendBtn').disabled = true;
   isStreaming = true;
 
-  const sessionID = crypto.randomUUID();
-  currentSessionID = sessionID;
+  if (!currentSessionID) {
+    currentSessionID = crypto.randomUUID();
+  }
+  const sessionID = currentSessionID;
   currentAIBubble = null;
   currentAIMsg = null;
   currentThinkingWrap = null;

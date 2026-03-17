@@ -176,56 +176,44 @@ func SetupServer(configPath string) (*web.Server, string, error) {
 
 // buildLLMProvider constructs a Provider (single or multi-fallback) from model_list config.
 func buildLLMProvider(cfg *config.Config) llm.Provider {
-	var providers []llm.Provider
-
-	if len(cfg.ModelList) > 0 {
-		primaryCfg, modelName, err := cfg.ResolveModelSelection()
-		if err == nil {
-			if primaryCfg.APIKey != "" || strings.EqualFold(primaryCfg.Provider, "ollama") {
-				providers = append(providers, llm.NewClient(primaryCfg))
-			}
-			fallbacks, fbErr := cfg.ResolveFallbackSelections()
-			if fbErr != nil {
-				log.Printf("Warning: resolving fallback models failed: %v", fbErr)
-			} else {
-				for _, fb := range fallbacks {
-					if fb.APIKey != "" || strings.EqualFold(fb.Provider, "ollama") {
-						modelCfg := fb
-						providers = append(providers, llm.NewClient(&modelCfg))
-					}
-				}
-			}
-			log.Printf("LLM: primary=%s -> %s, fallbacks=%d", modelName, primaryCfg.Model, max(len(providers)-1, 0))
-		} else {
-			log.Printf("Warning: resolving model_list failed: %v", err)
-		}
-	}
-
-	if len(providers) == 0 {
-		log.Printf("Warning: no LLM API key configured — AI responses will fail")
-		return llm.NewDisabledProvider("missing model_list api key")
-	}
-
-	if len(providers) == 1 {
-		return providers[0]
-	}
-	return llm.NewMultiProvider(providers...)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+	return llm.BuildProviderFromConfig(cfg)
 }
 
 func initAgentFiles(agentsDir string) error {
-	agentsMDPath := agentsDir + "/AGENTS.md"
-	if _, err := os.Stat(agentsMDPath); os.IsNotExist(err) {
-		content := defaultAgentsMD()
-		return os.WriteFile(agentsMDPath, []byte(content), 0644)
+	files := map[string]func() string{
+		"AGENTS.md": defaultAgentsMD,
+		"SOUL.md":   defaultAgentsSoulMD,
+	}
+	for name, content := range files {
+		path := agentsDir + "/" + name
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if err := os.WriteFile(path, []byte(content()), 0644); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
+}
+
+func defaultAgentsSoulMD() string {
+	return `# 知知的人格设置
+
+## 核心性格
+- 热情、耐心，把每个学生当成独特的个体
+- 充满好奇心，对任何问题都真诚地感兴趣
+- 有幽默感，但不嘲笑学生的错误
+- 坦诚，会承认不确定的地方
+
+## 教学风格
+- 苏格拉底式：以提问引导，而不是直接给答案
+- 用类比和故事让抽象概念变具体
+- 把挫折重新框架为"学习的机会"
+
+## 语言习惯
+- 开场白："好问题！"、"让我们一起来看看..."
+- 表扬："你真的想到了！"、"这个角度很棒！"
+- 引导："你觉得..."、"如果换一种方式呢？"
+`
 }
 
 func defaultAgentsMD() string {

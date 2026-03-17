@@ -2,8 +2,6 @@ package agents
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pingjie/educlaw/pkg/skills"
@@ -12,30 +10,21 @@ import (
 
 // ContextBuilder assembles system prompts for agents.
 type ContextBuilder struct {
-	wm               *workspace.Manager
-	actorDir         string
-	agentDir         string
-	builtinSkillsDir string
-	skillsLoader     *skills.Loader
+	wm           *workspace.Manager
+	actorDir     string
+	agentDir     string
+	skillsLoader *skills.Loader
 }
 
-// NewContextBuilder creates a new ContextBuilder.
-func NewContextBuilder(wm *workspace.Manager, actorDir, agentDir, builtinSkillsDir string) *ContextBuilder {
-	workspaceSkillsDir := filepath.Join(wm.BaseDir(), "skills")
-	globalSkillsDir := ""
-	if home, err := os.UserHomeDir(); err == nil {
-		globalSkillsDir = filepath.Join(home, ".educlaw", "skills")
-		if globalSkillsDir == workspaceSkillsDir {
-			globalSkillsDir = ""
-		}
-	}
-	skillsLoader := skills.NewLoader(workspaceSkillsDir, globalSkillsDir, builtinSkillsDir)
+// NewContextBuilder creates a new ContextBuilder using the provided skills loader.
+// The caller is responsible for the loader's lifecycle; the same loader instance
+// should be shared with the tool registry to avoid duplicate directory scans.
+func NewContextBuilder(wm *workspace.Manager, actorDir, agentDir string, skillsLoader *skills.Loader) *ContextBuilder {
 	return &ContextBuilder{
-		wm:               wm,
-		actorDir:         actorDir,
-		agentDir:         agentDir,
-		builtinSkillsDir: builtinSkillsDir,
-		skillsLoader:     skillsLoader,
+		wm:           wm,
+		actorDir:     actorDir,
+		agentDir:     agentDir,
+		skillsLoader: skillsLoader,
 	}
 }
 
@@ -163,7 +152,7 @@ func (cb *ContextBuilder) Build(actorType, agentType string) string {
 		parts = append(parts, "# Recent Learning Journal\n"+recentNotes)
 	}
 
-	// 5. Skills summary
+	// 6. Skills summary
 	if summary := cb.skillsLoader.BuildSummary(); summary != "" {
 		parts = append(parts, fmt.Sprintf("# Available Skills\n%s", summary))
 	}

@@ -182,6 +182,16 @@
     <button class="btn btn-primary" onclick="createParent()">+ 注册</button>
   </div>
 
+  <!-- Add Child -->
+  <div class="parent-selector" id="addChildBar" style="display:none">
+    <label style="font-size:0.9rem;color:#4a5568">添加孩子：</label>
+    <input type="text" id="newChildName" placeholder="孩子姓名"
+      style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;outline:none;" />
+    <input type="text" id="newChildGrade" placeholder="年级（如：三年级）"
+      style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;outline:none;" />
+    <button class="btn btn-primary" onclick="registerChild()">+ 注册孩子</button>
+  </div>
+
   <!-- Stats Row -->
   <div class="grid-3" id="statsRow" style="display:none">
     <div class="card stat-card">
@@ -282,11 +292,30 @@ async function loadReport() {
   selectParent(sel.value);
 }
 
+async function registerChild() {
+  if (!currentParentID) { alert('请先选择家长账号'); return; }
+  const name = document.getElementById('newChildName').value.trim();
+  const grade = document.getElementById('newChildGrade').value.trim();
+  if (!name) { alert('请输入孩子姓名'); return; }
+  try {
+    const res = await fetch('/api/onboard', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_type: 'student', name, grade, family_id: currentParentID })
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || '注册失败'); return; }
+    document.getElementById('newChildName').value = '';
+    document.getElementById('newChildGrade').value = '';
+    fetchReport(currentParentID);
+  } catch(e) { alert('注册失败: ' + e); }
+}
+
 function selectParent(id) {
   currentParentID = id;
   currentSessionID = '';
   document.getElementById('sendBtn').disabled = false;
 
+  document.getElementById('addChildBar').style.display = '';
   document.getElementById('statsRow').style.display = '';
   document.getElementById('studentsGrid').style.display = '';
   document.getElementById('chatSection').style.display = '';
@@ -499,8 +528,10 @@ async function sendChat() {
   document.getElementById('sendBtn').disabled = true;
   isStreaming = true;
 
-  const sessionID = crypto.randomUUID();
-  currentSessionID = sessionID;
+  if (!currentSessionID) {
+    currentSessionID = crypto.randomUUID();
+  }
+  const sessionID = currentSessionID;
   currentAIBubble = null;
   currentThinkingWrap = null;
   currentThinkingBody = null;

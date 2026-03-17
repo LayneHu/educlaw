@@ -18,6 +18,7 @@ type Actor struct {
 	Grade     string
 	Subject   string
 	FamilyID  string
+	TeacherID string
 	CreatedAt time.Time
 }
 
@@ -165,11 +166,11 @@ func SaveRenderedContent(db *sql.DB, sessionID, actorID string, rc RenderedConte
 }
 
 // SaveActor creates or updates an actor record.
-func SaveActor(db *sql.DB, id, actorType, name, grade, subject, familyID string) error {
+func SaveActor(db *sql.DB, id, actorType, name, grade, subject, familyID, teacherID string) error {
 	_, err := db.Exec(
-		`INSERT OR REPLACE INTO actors (id, actor_type, name, grade, subject, family_id)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		id, actorType, name, grade, subject, familyID,
+		`INSERT OR REPLACE INTO actors (id, actor_type, name, grade, subject, family_id, teacher_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		id, actorType, name, grade, subject, familyID, teacherID,
 	)
 	if err != nil {
 		return fmt.Errorf("saving actor: %w", err)
@@ -181,9 +182,9 @@ func SaveActor(db *sql.DB, id, actorType, name, grade, subject, familyID string)
 func GetActor(db *sql.DB, id string) (*Actor, error) {
 	var a Actor
 	err := db.QueryRow(
-		`SELECT id, actor_type, name, grade, subject, family_id, created_at FROM actors WHERE id = ?`,
+		`SELECT id, actor_type, name, grade, subject, family_id, COALESCE(teacher_id,''), created_at FROM actors WHERE id = ?`,
 		id,
-	).Scan(&a.ID, &a.ActorType, &a.Name, &a.Grade, &a.Subject, &a.FamilyID, &a.CreatedAt)
+	).Scan(&a.ID, &a.ActorType, &a.Name, &a.Grade, &a.Subject, &a.FamilyID, &a.TeacherID, &a.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -196,7 +197,7 @@ func GetActor(db *sql.DB, id string) (*Actor, error) {
 // ListActors lists all actors of a given type.
 func ListActors(db *sql.DB, actorType string) ([]Actor, error) {
 	rows, err := db.Query(
-		`SELECT id, actor_type, name, grade, subject, family_id, created_at FROM actors WHERE actor_type = ?`,
+		`SELECT id, actor_type, name, grade, subject, family_id, COALESCE(teacher_id,''), created_at FROM actors WHERE actor_type = ?`,
 		actorType,
 	)
 	if err != nil {
@@ -207,7 +208,30 @@ func ListActors(db *sql.DB, actorType string) ([]Actor, error) {
 	var actors []Actor
 	for rows.Next() {
 		var a Actor
-		if err := rows.Scan(&a.ID, &a.ActorType, &a.Name, &a.Grade, &a.Subject, &a.FamilyID, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.ActorType, &a.Name, &a.Grade, &a.Subject, &a.FamilyID, &a.TeacherID, &a.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning actor: %w", err)
+		}
+		actors = append(actors, a)
+	}
+	return actors, rows.Err()
+}
+
+// ListActorsByTeacher lists all students assigned to a given teacher.
+func ListActorsByTeacher(db *sql.DB, teacherID string) ([]Actor, error) {
+	rows, err := db.Query(
+		`SELECT id, actor_type, name, grade, subject, family_id, COALESCE(teacher_id,''), created_at
+		 FROM actors WHERE actor_type = 'student' AND teacher_id = ?`,
+		teacherID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing actors by teacher: %w", err)
+	}
+	defer rows.Close()
+
+	var actors []Actor
+	for rows.Next() {
+		var a Actor
+		if err := rows.Scan(&a.ID, &a.ActorType, &a.Name, &a.Grade, &a.Subject, &a.FamilyID, &a.TeacherID, &a.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning actor: %w", err)
 		}
 		actors = append(actors, a)

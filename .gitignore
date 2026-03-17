@@ -1,6 +1,7 @@
 config.json
 *.test
 *.out
+*.exe
 
 dist/
 build/
@@ -11,3 +12,5 @@ tmp/
 
 .DS_Store
 Thumbs.db
+
+.claude/

@@ -35,7 +35,7 @@ func TestSetupSnapshotTracksConfigAndTeacher(t *testing.T) {
 	}
 
 	cfg.ModelList[0].APIKey = "sk-test"
-	if err := storage.SaveActor(db, "teacher-1", "teacher", "张老师", "五年级", "数学", ""); err != nil {
+	if err := storage.SaveActor(db, "teacher-1", "teacher", "张老师", "五年级", "数学", "", ""); err != nil {
 		t.Fatalf("SaveActor() error = %v", err)
 	}
 

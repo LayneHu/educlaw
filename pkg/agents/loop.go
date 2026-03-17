@@ -60,6 +60,12 @@ func (al *AgentLoop) SetCronService(svc *cron.Service) {
 	al.cronSvc = svc
 }
 
+// SetLLMProvider replaces the active LLM provider at runtime (e.g. after
+// the user saves new API credentials via the setup wizard).
+func (al *AgentLoop) SetLLMProvider(p llm.Provider) {
+	al.llm = p
+}
+
 // Process handles an inbound message through the full ReAct loop.
 func (al *AgentLoop) Process(ctx context.Context, msg bus.InboundMessage) error {
 	// 1. Get or create session
@@ -84,7 +90,7 @@ func (al *AgentLoop) Process(ctx context.Context, msg bus.InboundMessage) error 
 	agentType := orchestrator.Route(msg.ActorType, msg.Content)
 	actorDir := al.actorDirForType(msg.ActorID, msg.ActorType)
 	agentDir := al.wm.AgentDir()
-	cb := NewContextBuilder(al.wm, actorDir, agentDir, al.cfg.Skills.BuiltinDir)
+	cb := NewContextBuilder(al.wm, actorDir, agentDir, al.skillsLoader)
 	systemPrompt := cb.Build(msg.ActorType, agentType)
 	log.Printf("[agent] actor=%s type=%s → agent=%s", msg.ActorID, msg.ActorType, agentType)
 

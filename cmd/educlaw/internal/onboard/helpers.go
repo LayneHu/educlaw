@@ -79,31 +79,23 @@ func runOnboard(_ *cobra.Command, _ []string) error {
 	id := uuid.New().String()
 
 	// Save to DB
-	if err := storage.SaveActor(db, id, actorType, name, grade, subject, familyID); err != nil {
+	if err := storage.SaveActor(db, id, actorType, name, grade, subject, familyID, ""); err != nil {
 		return fmt.Errorf("saving actor: %w", err)
 	}
 
 	// Initialize workspace directory
 	var actorDir string
-	var templateDir string
 	switch actorType {
 	case "student":
 		actorDir = wm.StudentDir(id)
-		templateDir = "workspace_templates/student"
 	case "family":
 		actorDir = wm.FamilyDir(id)
-		templateDir = "workspace_templates/family"
 	case "teacher":
 		actorDir = wm.TeacherDir(id)
-		templateDir = "workspace_templates/teacher"
 	}
 
-	if err := os.MkdirAll(actorDir, 0755); err != nil {
-		return fmt.Errorf("creating workspace: %w", err)
-	}
-
-	// Copy templates
-	if err := wm.InitFromTemplate(actorDir, templateDir); err != nil {
+	// Copy embedded templates (works in single-binary deployments)
+	if err := wm.InitFromEmbeddedTemplate(actorDir, actorType); err != nil {
 		fmt.Printf("Warning: could not copy templates: %v\n", err)
 	}
 

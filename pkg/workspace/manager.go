@@ -3,6 +3,7 @@ package workspace
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -182,6 +183,43 @@ func (m *Manager) InitFromTemplate(dir, templateDir string) error {
 		}
 	}
 	return nil
+}
+
+// InitFromEmbeddedTemplate copies files from the embedded templates into the
+// target directory. The templateType must be one of "student", "family", or
+// "teacher". Existing files in targetDir are never overwritten.
+func (m *Manager) InitFromEmbeddedTemplate(targetDir, templateType string) error {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("creating target directory: %w", err)
+	}
+	subFS, err := fs.Sub(EmbeddedTemplates, "templates/"+templateType)
+	if err != nil {
+		return fmt.Errorf("accessing embedded template %s: %w", templateType, err)
+	}
+	return fs.WalkDir(subFS, ".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if path == "." {
+			return nil
+		}
+		dstPath := filepath.Join(targetDir, path)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		// Don't overwrite existing files
+		if _, err := os.Stat(dstPath); err == nil {
+			return nil
+		}
+		data, err := fs.ReadFile(subFS, path)
+		if err != nil {
+			return fmt.Errorf("reading embedded file %s: %w", path, err)
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		return os.WriteFile(dstPath, data, 0644)
+	})
 }
 
 func copyFile(src, dst string) error {

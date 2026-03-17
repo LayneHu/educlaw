@@ -25,8 +25,8 @@ func (s *Server) HandleClassReport(c *gin.Context) {
 		return
 	}
 
-	// Get all students for class analysis
-	students, err := storage.ListActors(s.db, "student")
+	// Get students assigned to this teacher
+	students, err := storage.ListActorsByTeacher(s.db, teacherID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

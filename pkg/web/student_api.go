@@ -236,6 +236,7 @@ func (s *Server) HandleOnboard(c *gin.Context) {
 		Grade     string `json:"grade"`
 		Subject   string `json:"subject"`
 		FamilyID  string `json:"family_id"`
+		TeacherID string `json:"teacher_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -243,7 +244,7 @@ func (s *Server) HandleOnboard(c *gin.Context) {
 	}
 
 	id := uuid.New().String()
-	if err := storage.SaveActor(s.db, id, req.ActorType, req.Name, req.Grade, req.Subject, req.FamilyID); err != nil {
+	if err := storage.SaveActor(s.db, id, req.ActorType, req.Name, req.Grade, req.Subject, req.FamilyID, req.TeacherID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -260,6 +261,11 @@ func (s *Server) HandleOnboard(c *gin.Context) {
 	}
 
 	if actorDir != "" {
+		templateType := req.ActorType
+		if templateType == "parent" {
+			templateType = "family"
+		}
+		_ = s.wm.InitFromEmbeddedTemplate(actorDir, templateType)
 		_ = s.wm.WriteFile(actorDir, "PROFILE.md", fmt.Sprintf("# %s\n\nName: %s\nType: %s\nGrade: %s\n",
 			req.Name, req.Name, req.ActorType, req.Grade))
 	}

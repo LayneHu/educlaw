@@ -91,6 +91,43 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
+	if err := ensureActorsSchema(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensureActorsSchema(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(actors)`)
+	if err != nil {
+		return fmt.Errorf("querying actors schema: %w", err)
+	}
+	defer rows.Close()
+
+	hasTeacherID := false
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scanning actors schema: %w", err)
+		}
+		if name == "teacher_id" {
+			hasTeacherID = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("reading actors schema: %w", err)
+	}
+
+	if !hasTeacherID {
+		if _, err := db.Exec(`ALTER TABLE actors ADD COLUMN teacher_id TEXT`); err != nil {
+			return fmt.Errorf("adding actors.teacher_id column: %w", err)
+		}
+	}
 	return nil
 }
 
